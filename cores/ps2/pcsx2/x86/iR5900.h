@@ -1,0 +1,184 @@
+/*  PCSX2 - PS2 Emulator for PCs
+ *  Copyright (C) 2002-2010  PCSX2 Dev Team
+ *
+ *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
+ *  of the GNU Lesser General Public License as published by the Free Software Found-
+ *  ation, either version 3 of the License, or (at your option) any later version.
+ *
+ *  PCSX2 is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ *  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+ *  PURPOSE.  See the GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License along with PCSX2.
+ *  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#pragma once
+
+#include "../../common/emitter/x86emitter.h"
+#include "../R5900.h"
+#include "../VU.h"
+#include "iCore.h"
+
+// Register containing a pointer to our fastmem (4GB) area
+#define RFASTMEMBASE x86Emitter::rbp
+
+extern u32 pc;             // recompiler pc
+extern int g_branch;       // set for branch
+extern u32 target;         // branch target
+extern bool s_nBlockInterlocked; // Current block has VU0 interlocking
+
+//////////////////////////////////////////////////////////////////////////////////////////
+//
+
+#define REC_FUNC(f) \
+	void rec##f() \
+	{ \
+		recCall(Interp::f); \
+	}
+
+#define REC_FUNC_DEL(f, delreg) \
+	void rec##f() \
+	{ \
+		if ((delreg) > 0) \
+			_deleteEEreg(delreg, 1); \
+		recCall(Interp::f); \
+	}
+
+#define REC_SYS(f) \
+	void rec##f() \
+	{ \
+		recBranchCall(Interp::f); \
+	}
+
+#define REC_SYS_DEL(f, delreg) \
+	void rec##f() \
+	{ \
+		if ((delreg) > 0) \
+			_deleteEEreg(delreg, 1); \
+		recBranchCall(Interp::f); \
+	}
+
+extern bool g_recompilingDelaySlot;
+
+// Used for generating backpatch thunks for fastmem.
+u8* recBeginThunk(void);
+u8* recEndThunk(void);
+
+// used when processing branches
+bool TrySwapDelaySlot(u32 rs, u32 rt, u32 rd, bool allow_loadstore);
+void SaveBranchState();
+void LoadBranchState();
+
+void recompileNextInstruction(bool delayslot, bool swapped_delay_slot);
+void SetBranchReg(u32 reg);
+void SetBranchImm(u32 imm);
+
+void iFlushCall(int flushtype);
+void recBranchCall(void (*func)(void));
+void recCall(void (*func)(void));
+u32 scaleblockcycles_clear(void);
+
+namespace R5900
+{
+	namespace Dynarec
+	{
+		extern void recDoBranchImm(u32 branchTo, u32* jmpSkip, bool isLikely = false, bool swappedDelaySlot = false);
+	} // namespace Dynarec
+} // namespace R5900
+
+////////////////////////////////////////////////////////////////////
+// Constant Propagation - From here to the end of the header!
+
+#define GPR_IS_CONST1(reg) ((reg) < 32 && (g_cpuHasConstReg & (1 << (reg))))
+#define GPR_IS_CONST2(reg1, reg2) ((g_cpuHasConstReg & (1 << (reg1))) && (g_cpuHasConstReg & (1 << (reg2))))
+#define GPR_IS_DIRTY_CONST(reg) ((reg) < 32 && (g_cpuHasConstReg & (1 << (reg))) && (!(g_cpuFlushedConstReg & (1 << (reg)))))
+#define GPR_SET_CONST(reg) \
+	{ \
+		if ((reg) < 32) \
+		{ \
+			g_cpuHasConstReg |= (1 << (reg)); \
+			g_cpuFlushedConstReg &= ~(1 << (reg)); \
+		} \
+	}
+
+#define GPR_DEL_CONST(reg) \
+	{ \
+		if ((reg) < 32) \
+			g_cpuHasConstReg &= ~(1 << (reg)); \
+	}
+
+alignas(16) extern GPR_reg64 g_cpuConstRegs[32];
+extern u32 g_cpuHasConstReg, g_cpuFlushedConstReg;
+
+// finds where the GPR is stored and moves lower 32 bits to EAX
+void _eeMoveGPRtoR(const x86Emitter::xRegister32& to, int fromgpr, bool allow_preload = true);
+void _eeMoveGPRtoR(const x86Emitter::xRegister64& to, int fromgpr, bool allow_preload = true);
+void _eeMoveGPRtoM(uptr to, int fromgpr); // 32-bit only
+
+void _eeFlushAllDirty(void);
+void _eeOnWriteReg(int reg, int signext);
+
+// totally deletes from const, xmm, and mmx entries
+// if flush is 1, also flushes to memory
+// if 0, only flushes if not an xmm reg (used when overwriting lower 64bits of reg)
+void _deleteEEreg(int reg, int flush);
+void _deleteEEreg128(int reg);
+
+void _flushEEreg(int reg, bool clear = false);
+
+int _eeTryRenameReg(int to, int from, int fromx86, int other, int xmminfo);
+
+//////////////////////////////////////
+// Templates for code recompilation //
+//////////////////////////////////////
+
+typedef void (*R5900FNPTR)();
+typedef void (*R5900FNPTR_INFO)(int info);
+
+#define EERECOMPILE_CODE0(fn, xmminfo) \
+	void rec##fn(void) \
+	{ \
+		eeRecompileCode0(rec##fn##_const, rec##fn##_consts, rec##fn##_constt, rec##fn##_, (xmminfo)); \
+	}
+#define EERECOMPILE_CODERC0(fn, xmminfo) \
+	void rec##fn(void) \
+	{ \
+		eeRecompileCodeRC0(rec##fn##_const, rec##fn##_consts, rec##fn##_constt, rec##fn##_, (xmminfo)); \
+	}
+
+#define EERECOMPILE_CODEX(codename, fn, xmminfo) \
+	void rec##fn(void) \
+	{ \
+		codename(rec##fn##_const, rec##fn##_, (xmminfo)); \
+	}
+
+#define EERECOMPILE_CODEI(codename, fn, xmminfo) \
+	void rec##fn(void) \
+	{ \
+		codename(rec##fn##_const, rec##fn##_, (xmminfo)); \
+	}
+
+//
+// MMX/XMM caching helpers
+//
+
+// rd = rs op rt
+void eeRecompileCodeRC0(R5900FNPTR constcode, R5900FNPTR_INFO constscode, R5900FNPTR_INFO consttcode, R5900FNPTR_INFO noconstcode, int xmminfo);
+// rt = rs op imm16
+void eeRecompileCodeRC1(R5900FNPTR constcode, R5900FNPTR_INFO noconstcode, int xmminfo);
+// rd = rt op sa
+void eeRecompileCodeRC2(R5900FNPTR constcode, R5900FNPTR_INFO noconstcode, int xmminfo);
+
+#define FPURECOMPILE_CONSTCODE(fn, xmminfo) \
+	void rec##fn(void) \
+	{ \
+		if (CHECK_FPU_FULL) \
+			eeFPURecompileCode(DOUBLE::rec##fn##_xmm, R5900::Interpreter::OpcodeImpl::COP1::fn, xmminfo); \
+		else \
+			eeFPURecompileCode(rec##fn##_xmm, R5900::Interpreter::OpcodeImpl::COP1::fn, xmminfo); \
+	}
+
+// rd = rs op rt (all regs need to be in xmm)
+int eeRecompileCodeXMM(int xmminfo);
+void eeFPURecompileCode(R5900FNPTR_INFO xmmcode, R5900FNPTR fpucode, int xmminfo);

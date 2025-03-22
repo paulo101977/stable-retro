@@ -1,0 +1,33 @@
+add_granite_application(gltf-viewer viewer.cpp)
+add_granite_headless_application(gltf-viewer-headless viewer.cpp)
+
+target_link_libraries(gltf-viewer PRIVATE granite-scene-viewer)
+target_link_libraries(gltf-viewer-headless PRIVATE granite-scene-viewer)
+
+if (NOT ANDROID)
+    if (NOT GRANITE_SHIPPING)
+        target_compile_definitions(gltf-viewer PRIVATE ASSET_DIRECTORY=\"${CMAKE_CURRENT_SOURCE_DIR}/assets\")
+        target_compile_definitions(gltf-viewer-headless PRIVATE ASSET_DIRECTORY=\"${CMAKE_CURRENT_SOURCE_DIR}/assets\")
+    endif()
+    if (GRANITE_INSTALL_EXE_TARGETS)
+        install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/assets DESTINATION bin)
+        install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../assets DESTINATION bin/builtin)
+    endif()
+endif()
+
+if (GRANITE_BULLET)
+    add_granite_application(physics-sandbox physics_sandbox.cpp)
+    target_link_libraries(physics-sandbox PRIVATE granite-physics)
+    if (NOT ANDROID)
+        target_compile_definitions(physics-sandbox PRIVATE ASSET_DIRECTORY=\"${CMAKE_CURRENT_SOURCE_DIR}/assets\")
+    endif()
+endif()
+
+option(GRANITE_VIEWER_INSTALL "Install Granite viewer and assets." OFF)
+
+if (GRANITE_VIEWER_INSTALL)
+    granite_install_executable(gltf-viewer)
+    granite_install_executable(gltf-viewer-headless)
+    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/assets DESTINATION ${CMAKE_INSTALL_BINDIR})
+    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../assets DESTINATION ${CMAKE_INSTALL_BINDIR}/builtin)
+endif()

@@ -1,0 +1,31 @@
+name: 📝 Validate GameDB
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - '**/GameIndex.yaml'
+  pull_request:
+    branches:
+      - master
+    paths:
+      - '**/GameIndex.yaml'
+
+jobs:
+  lint:
+    name: Lint and Validate GameDB
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Validate Contents
+        run: |
+          npm install -g ajv-cli
+          ajv validate -s ./pcsx2/Docs/gamedb-schema.json --spec=draft2020 -d ./bin/resources/GameIndex.yaml
+
+      - name: Check Formatting
+        run: |
+          npm install -g prettier
+          prettier --check ./bin/resources/GameIndex.yaml

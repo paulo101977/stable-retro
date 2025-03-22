@@ -1,0 +1,93 @@
+//-----------------------------------------------------------------------------
+//	fossilize_layer.vpc
+//
+//	Project Script
+//-----------------------------------------------------------------------------
+
+$macro SRCDIR     "..\.."
+$macro TARGETNAME "VkLayer_steam_fossilize"
+$macro TARGETNAME "VkLayer_steam_fossilize64" [$WIN64]
+$macro OUTBINNAME "VkLayer_steam_fossilize"
+$macro OUTBINNAME "VkLayer_steam_fossilize64" [$WIN64]
+
+$macro TARGETCOPYNAME $_IMPLIB_DLL_PREFIX$OUTBINNAME
+
+$include "$SRCDIR\vpc_scripts\steam_dll_base.vpc"
+$include "$SRCDIR\vpc_scripts\steam_copy_target_client_dll.vpc"
+
+$macro OUTBINDIR "$SRCDIR\..\bin/$(ConfigurationName)"
+
+$Configuration
+{
+	$General
+	{
+		$OutputDirectory					".\$(TARGETNAME)$(Configuration)"
+		$IntermediateDirectory				".\$(TARGETNAME)$(Configuration)"
+		$GameOutputFile						"$OUTBINDIR/$TARGETCOPYNAME$_DLL_EXT"
+	}
+}
+
+$Configuration
+{
+	$Compiler
+	{
+		$PreprocessorDefinitions			"$BASE;NOMINMAX=1";VK_LAYER_fossilize="VK_LAYER_steam_fossilize";FOSSILIZE_DUMP_PATH_ENV="STEAM_FOSSILIZE_DUMP_PATH";FOSSILIZE_DUMP_PATH_READ_ONLY_ENV="STEAM_FOSSILIZE_DUMP_PATH_READ_ONLY";FOSSILIZE_IDENTIFIER_DUMP_PATH_ENV="STEAM_FOSSILIZE_IDENTIFIER_DUMP_PATH";FOSSILIZE_LAST_USE_TAG_ENV="STEAM_FOSSILIZE_LAST_USE_TAG";FOSSILIZE_PRECOMPILE_QA_ENV="STEAM_FOSSILIZE_PRECOMPILE_QA" [$WINDOWS]
+		$PreprocessorDefinitions			"$BASE;DONT_WRAP_FILEIO";__STDC_FORMAT_MACROS;VK_LAYER_fossilize=\"VK_LAYER_steam_fossilize\";FOSSILIZE_DUMP_PATH_ENV=\"STEAM_FOSSILIZE_DUMP_PATH\";FOSSILIZE_DUMP_PATH_READ_ONLY_ENV=\"STEAM_FOSSILIZE_DUMP_PATH_READ_ONLY\";FOSSILIZE_IDENTIFIER_DUMP_PATH_ENV=\"STEAM_FOSSILIZE_IDENTIFIER_DUMP_PATH\";FOSSILIZE_LAST_USE_TAG_ENV=\"STEAM_FOSSILIZE_LAST_USE_TAG\";FOSSILIZE_PRECOMPILE_QA_ENV=\"STEAM_FOSSILIZE_PRECOMPILE_QA\" [$POSIX]
+		$AdditionalIncludeDirectories		"$BASE;.\rapidjson\include"
+		$AdditionalIncludeDirectories		"$BASE;.\khronos"
+		$AdditionalIncludeDirectories		"$BASE;.\miniz"
+		$AdditionalIncludeDirectories		"$BASE;..;."
+		$AdditionalIncludeDirectories		"$BASE;.\cli\dirent\include" [$WINDOWS]
+		$TreatWarningsAsErrors				"false"
+		$WarningLevel						"Level 2 (/W2)"
+		$GCC_ExtraCompilerFlags				"$BASE -Wno-shadow" [$LINUXALL]
+		$GCC_ExtraCompilerFlags				"$BASE -Wno-unused-variable" [$LINUXALL]
+		$GCC_ExtraCompilerFlags				"$BASE -Wno-format" [$LINUXALL]
+		$GCC_ExtraCompilerFlags				"$BASE -Wno-format-security" [$LINUXALL]
+		$GCC_ExtraCompilerFlags				"$BASE -fvisibility=hidden" [$LINUXALL]
+		// -O3 produces an unstable 32 bit binary for some unknown reason, related to a missing pthread_once symbol
+		// see https://gitlab.steamos.cloud/steamrt/tasks/-/issues/189
+		$GCC_ExtraCompilerFlags				"$BASE -O2" [$LINUXALL]
+		$DisableSpecificWarnings			"$BASE;6313" [$ANALYZE] // Disable C6313: Incorrect operator: zero-valued flag cannot be tested with bitwise-and for rapidjson code
+	}
+}
+
+$Project "fossilize_layer"
+{
+	$Folder "Source Files"
+	{
+		$File ".\layer\device.cpp"
+		$File ".\layer\dispatch.cpp"
+		$File ".\layer\dispatch_helper.cpp"
+		$File ".\layer\instance.cpp"
+			
+	}
+
+	$Folder "Header Files"
+	{
+		$File ".\layer\device.hpp"
+		$File ".\layer\dispatch_helper.hpp"
+		$File ".\layer\instance.hpp"
+	}
+	
+	$Folder "fossilize"
+	{
+		$File ".\fossilize.cpp"
+		$File ".\fossilize_application_filter.cpp"
+		$File ".\fossilize_db.cpp"
+		$File ".\fossilize_external_replayer.cpp"
+		$File ".\path.cpp"
+		$File ".\varint.cpp"
+		$File ".\fossilize.hpp"
+		$File ".\fossilize_db.hpp"
+		$File ".\fossilize_external_replayer.hpp"
+		$File ".\path.hpp"
+		$File ".\varint.hpp"
+	}
+
+	$Folder "miniz"
+	{
+		$File ".\miniz\miniz.c"
+		$File ".\miniz\miniz.h"
+	}
+}

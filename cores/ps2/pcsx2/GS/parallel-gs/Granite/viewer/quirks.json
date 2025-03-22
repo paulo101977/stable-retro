@@ -1,0 +1,13 @@
+{
+	"instanceDeferredLights": true,
+	"mergeSubpasses" : true,
+	"useTransientColor": true,
+	"useTransientDepthStencil": true,
+	"queueWaitOnSubmission": false,
+	"stagingNeedDeviceLocal" : false,
+	"useAsyncComputePost": true,
+	"renderGraphForceSingleQueue" : false,
+	"forceNoSubgroups" : false,
+	"forceNoSubgroupShuffle" : false,
+	"forceNoSubgroupSizeControl" : false
+}

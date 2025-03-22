@@ -1,0 +1,196 @@
+#version 450
+#extension GL_EXT_scalar_block_layout : require
+#extension GL_EXT_samplerless_texture_functions : require
+
+layout(local_size_x = 32) in;
+
+#define MESHLET_RENDER_DESCRIPTOR_SET 0
+#define MESHLET_RENDER_BOUND_BINDING 6
+#define MESHLET_RENDER_AABB_BINDING 0
+#define MESHLET_RENDER_AABB_VISIBILITY
+#define MESHLET_RENDER_TRANSFORM_BINDING 1
+#define MESHLET_RENDER_FRUSTUM_BINDING 7
+#if MESHLET_RENDER_PHASE == 2
+#define MESHLET_RENDER_HIZ_BINDING 8
+#endif
+#if MESHLET_RENDER_PHASE >= 1
+#define MESHLET_RENDER_OCCLUDER_BINDING 9
+#endif
+#define MESHLET_RENDER_TASKS_BINDING 2
+#include "meshlet_render.h"
+
+#define MESHLET_RENDER_NO_Z_PREPASS
+
+layout(constant_id = 0) const int MESHLET_RENDER_DRAW_WORDS = 0;
+layout(constant_id = 1) const int NUM_CHUNK_WORKGROUPS = 0;
+
+layout(set = 0, binding = 3, std430) readonly buffer InputDraws
+{
+    uint draws[];
+} input_draws;
+
+layout(set = 0, binding = 4, std430) writeonly buffer OutputDraws
+{
+    uint count[1024];
+    uint draws[];
+} output_draws;
+
+layout(set = 0, binding = 5, std430) writeonly buffer CompactedDraws
+{
+    CompactedDrawInfo data[];
+} output_draw_info;
+
+layout(push_constant, std430) uniform Registers
+{
+    vec3 camera_pos;
+    uint count;
+} registers;
+
+shared uint ballot_value;
+shared uint global_offset;
+
+uvec4 ballot(bool v)
+{
+    barrier();
+    if (gl_LocalInvocationIndex == 0)
+        ballot_value = 0;
+    barrier();
+    if (v)
+        atomicOr(ballot_value, 1u << gl_LocalInvocationIndex);
+    barrier();
+    return uvec4(ballot_value, 0, 0, 0);
+}
+
+uint ballotBitCount(uvec4 v)
+{
+    return bitCount(v.x);
+}
+
+uint ballotExclusiveBitCount(uvec4 v)
+{
+    uint mask = (1u << gl_LocalInvocationIndex) - 1u;
+    return bitCount(v.x & mask);
+}
+#define local_invocation_id gl_LocalInvocationIndex
+
+void main()
+{
+    TaskInfo task;
+    uint task_index = gl_WorkGroupID.x * gl_WorkGroupSize.x + local_invocation_id;
+    bool task_needs_work = false;
+    if (task_index < registers.count)
+    {
+        task = task_info.data[task_index];
+
+        // Precull the group.
+        bool visible = bitfieldExtract(aabb.data[task.aabb_instance / 32], int(task.aabb_instance & 31), 1) != 0;
+#if MESHLET_RENDER_PHASE == 1
+        // In Phase 1, we only accept occluders which were marked as visible.
+        // If any bit is set, accept it.
+        task_needs_work = visible && occluders.data[task.occluder_state_offset] != 0;
+#else
+        task_needs_work = visible;
+#if MESHLET_RENDER_PHASE == 2
+        // Nothing is visible, clear out occluder state.
+        if (!task_needs_work)
+            occluders.data[task.occluder_state_offset] = 0;
+#endif
+#endif
+    }
+
+    uint b = ballot(task_needs_work).x;
+
+    while (b != 0)
+    {
+        int lane = findLSB(b);
+        b &= ~(1u << lane);
+
+        TaskInfo tmp_task = task_info.data[gl_WorkGroupID.x * gl_WorkGroupSize.x + lane];
+        uint node_instance = tmp_task.node_instance;
+        uint material_index = tmp_task.material_index;
+        uint mesh_index_count = tmp_task.mesh_index_count;
+
+        uint offset = mesh_index_count & ~31u;
+        uint count = bitfieldExtract(mesh_index_count, 0, 5) + 1;
+
+        uint meshlet_index = offset + local_invocation_id;
+
+#if MESHLET_RENDER_PHASE >= 1
+        uint visibility_state = occluders.data[tmp_task.occluder_state_offset];
+#endif
+
+        bool alloc_draw = false;
+        if (local_invocation_id < count)
+        {
+            mat4 M = transforms.data[node_instance];
+            Bound b = bounds.data[meshlet_index];
+
+#if MESHLET_RENDER_PHASE == 1
+            if (bitfieldExtract(visibility_state, int(local_invocation_id), 1) != 0)
+                alloc_draw = cluster_cull(M, b, registers.camera_pos);
+#else
+            alloc_draw = cluster_cull(M, b, registers.camera_pos);
+#endif
+        }
+
+        uvec4 draw_ballot = ballot(alloc_draw);
+
+#if MESHLET_RENDER_PHASE == 2
+        // Record all clusters that are considered visible in this frame.
+        if (local_invocation_id == 0)
+            occluders.data[tmp_task.occluder_state_offset] = draw_ballot.x;
+
+#ifdef MESHLET_RENDER_NO_Z_PREPASS
+        // If we already rendered in phase 1, skip the draw here.
+        // If we only did a Z-prepass, we still need to render.
+        if (bitfieldExtract(visibility_state, int(local_invocation_id), 1) != 0)
+            alloc_draw = false;
+
+        draw_ballot = ballot(alloc_draw);
+#endif
+#endif
+
+        uint draw_count = ballotBitCount(draw_ballot);
+        uint local_offset = ballotExclusiveBitCount(draw_ballot);
+
+        // WAR barrier is implied here in earlier ballot.
+        if (local_invocation_id == 0 && draw_count != 0)
+        {
+            global_offset = atomicAdd(output_draws.count[0], draw_count);
+            if (MESHLET_RENDER_DRAW_WORDS == 0)
+            {
+                uint max_global_offset = global_offset + draw_count - 1;
+                // Meshlet style.
+                // Only guaranteed to get 0xffff meshlets, so use 32k as cutoff for easy math.
+                // Allocate the 2D draws in-place, avoiding an extra barrier.
+                uint multi_draw_index = max_global_offset / 0x8000u;
+                uint local_draw_index = max_global_offset & 0x7fffu;
+                const int INC_OFFSET = NUM_CHUNK_WORKGROUPS == 1 ? 0 : 1;
+                atomicMax(output_draws.count[1], multi_draw_index + 1);
+                atomicMax(output_draws.count[2 + 3 * multi_draw_index + INC_OFFSET], local_draw_index + 1);
+                if (local_draw_index <= draw_count)
+                {
+                    // This is the thread that takes us over the threshold.
+                    output_draws.count[2 + 3 * multi_draw_index + 1 - INC_OFFSET] = NUM_CHUNK_WORKGROUPS;
+                    output_draws.count[2 + 3 * multi_draw_index + 2] = 1;
+                }
+
+                // Wrapped around, make sure last bucket sees 32k meshlets.
+                if (multi_draw_index != 0 && local_draw_index < draw_count)
+                    atomicMax(output_draws.count[2 + 3 * (multi_draw_index - 1) + INC_OFFSET], 0x8000u);
+            }
+        }
+        barrier();
+
+        if (alloc_draw)
+        {
+			uint dst_offset = MESHLET_RENDER_DRAW_WORDS * (global_offset + local_offset);
+			uint src_offset = meshlet_index * MESHLET_RENDER_DRAW_WORDS;
+			for (int i = 0; i < MESHLET_RENDER_DRAW_WORDS; i++)
+				output_draws.draws[dst_offset + i] = input_draws.draws[src_offset + i];
+
+            output_draw_info.data[global_offset + local_offset] =
+				CompactedDrawInfo(meshlet_index, node_instance, material_index);
+        }
+    }
+}

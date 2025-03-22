@@ -1,0 +1,55 @@
+/* Copyright (c) 2017-2024 Hans-Kristian Arntzen
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+#pragma once
+
+#include "widget.hpp"
+#include "resource_manager.hpp"
+#include "sampler.hpp"
+
+namespace Granite
+{
+namespace UI
+{
+class Image : public Widget
+{
+public:
+	Image(const std::string &path, vec2 target);
+
+	void set_filter(Vulkan::StockSampler sampler_)
+	{
+		sampler = sampler_;
+	}
+
+	void reconfigure() override;
+
+private:
+	float render(FlatRenderer &renderer, float layout, vec2 offset, vec2 size) override;
+	void reconfigure_to_canvas(vec2 offset, vec2 size) override;
+	AssetID texture;
+	Vulkan::StockSampler sampler = Vulkan::StockSampler::LinearClamp;
+
+	vec2 sprite_offset;
+	vec2 sprite_size;
+};
+}
+}
