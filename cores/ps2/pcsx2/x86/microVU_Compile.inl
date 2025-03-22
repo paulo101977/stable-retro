@@ -20,7 +20,8 @@
 //------------------------------------------------------------------
 
 // Used by mVUsetupRange
-__fi void mVUcheckIsSame(mV)
+// __fi void mVUcheckIsSame(mV)
+void mVUcheckIsSame(mV)
 {
 	if (mVU.prog.isSame == -1)
 		mVU.prog.isSame = !memcmp((u8*)mVUcurProg.data, vuRegs[mVU.index].Micro, mVU.microMemSize);
@@ -211,7 +212,8 @@ void mVUexecuteInstruction(mV)
 //this happens, so we will bomb out without warning.
 #define mVUcheckBadOp(mV) if (mVUinfo.isBadOp && mVU.code != 0x8000033c) mVUinfo.isEOB = true
 
-__ri void branchWarning(mV)
+// __ri void branchWarning(mV)
+void branchWarning(mV)
 {
 	incPC(-2);
 	incPC(2);
@@ -244,8 +246,10 @@ __ri void branchWarning(mV)
 //------------------------------------------------------------------
 // Cycles / Pipeline State / Early Exit from Execution
 //------------------------------------------------------------------
-__fi u8 optimizeReg(u8 rState) { return (rState == 1) ? 0 : rState; }
-__fi u8 calcCycles(u8 reg, u8 x) { return ((reg > x) ? (reg - x) : 0); }
+// __fi u8 optimizeReg(u8 rState) { return (rState == 1) ? 0 : rState; }
+u8 optimizeReg(u8 rState) { return (rState == 1) ? 0 : rState; }
+// __fi u8 calcCycles(u8 reg, u8 x) { return ((reg > x) ? (reg - x) : 0); }
+u8 calcCycles(u8 reg, u8 x) { return ((reg > x) ? (reg - x) : 0); }
 #define incP(mV) mVU.p ^= 1
 #define incQ(mV) mVU.q ^= 1
 
@@ -438,7 +442,8 @@ void mVUtestCycles(microVU& mVU, microFlagCycles& mFC)
 	mVUconstReg[15].regValue = mVUregs.vi15v ? mVUregs.vi15 : 0
 
 // Initialize Variables
-__fi void mVUinitFirstPass(microVU& mVU, uptr pState, u8* thisPtr)
+// __fi void mVUinitFirstPass(microVU& mVU, uptr pState, u8* thisPtr)
+void mVUinitFirstPass(microVU& mVU, uptr pState, u8* thisPtr)
 {
 	mVUstartPC = iPC; // Block Start PC
 	mVUbranch  = 0;   // Branch Type
@@ -870,7 +875,8 @@ void* mVUcompile(microVU& mVU, u32 startPC, uptr pState)
 }
 
 // Returns the entry point of the block (compiles it if not found)
-__fi void* mVUentryGet(microVU& mVU, microBlockManager* block, u32 startPC, uptr pState)
+// __fi void* mVUentryGet(microVU& mVU, microBlockManager* block, u32 startPC, uptr pState)
+void* mVUentryGet(microVU& mVU, microBlockManager* block, u32 startPC, uptr pState)
 {
 	microBlock* pBlock = block->search(mVU, (microRegInfo*)pState);
 	if (pBlock)
@@ -879,7 +885,8 @@ __fi void* mVUentryGet(microVU& mVU, microBlockManager* block, u32 startPC, uptr
 }
 
 // Search for Existing Compiled Block (if found, return x86ptr; else, compile and return x86ptr)
-__fi void* mVUblockFetch(microVU& mVU, u32 startPC, uptr pState)
+// __fi void* mVUblockFetch(microVU& mVU, u32 startPC, uptr pState)
+void* mVUblockFetch(microVU& mVU, u32 startPC, uptr pState)
 {
 	startPC &= mVU.microMemSize - 8;
 
@@ -888,7 +895,8 @@ __fi void* mVUblockFetch(microVU& mVU, u32 startPC, uptr pState)
 }
 
 // mVUcompileJIT() - Called By JR/JALR during execution
-_mVUt void* mVUcompileJIT(u32 startPC, uptr ptr)
+// _mVUt void* mVUcompileJIT(u32 startPC, uptr ptr)
+void* mVUcompileJIT(u32 startPC, uptr ptr)
 {
 	if (doJumpAsSameProgram) // Treat jump as part of same microProgram
 	{

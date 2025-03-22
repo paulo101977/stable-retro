@@ -18,7 +18,8 @@
 #include "Global.h"
 #include "../GS/GSVector.h"
 
-__forceinline s32 V_Core::RevbGetIndexer(s32 offset)
+// __forceinline s32 V_Core::RevbGetIndexer(s32 offset)
+s32 V_Core::RevbGetIndexer(s32 offset)
 {
 	u32 start = EffectsStartA & 0x3f'ffff;
 	u32 end   = (EffectsEndA & 0x3f'ffff) | 0xffff;

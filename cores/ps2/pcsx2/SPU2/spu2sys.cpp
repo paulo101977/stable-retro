@@ -187,7 +187,8 @@ void V_Core::Init(int index)
 /* TICKINTERVAL * SANITYINTERVAL = 3686400 */
 #define SAMPLECOUNT 3686400 
 
-__forceinline void TimeUpdate(u32 cClocks)
+// __forceinline void TimeUpdate(u32 cClocks)
+void TimeUpdate(u32 cClocks)
 {
 	u32 dClocks = cClocks - lClocks;
 
@@ -400,7 +401,8 @@ __forceinline void TimeUpdate(u32 cClocks)
 	}
 }
 
-__forceinline void UpdateSpdifMode(void)
+// __forceinline void UpdateSpdifMode(void)
+void UpdateSpdifMode(void)
 {
 	if (Spdif.Out & 0x4) // use 24/32bit PCM data streaming
 	{

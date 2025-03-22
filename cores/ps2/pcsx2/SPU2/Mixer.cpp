@@ -19,7 +19,8 @@
 #include "spu2.h"
 #include "interpolate_table.h"
 
-static void __forceinline XA_decode_block(s16* buffer, const s16* block, s32& prev1, s32& prev2)
+// static void __forceinline XA_decode_block(s16* buffer, const s16* block, s32& prev1, s32& prev2)
+static void XA_decode_block(s16* buffer, const s16* block, s32& prev1, s32& prev2)
 {
 	static const s32 tbl_XA_Factor[16][2] =
 	{
@@ -56,7 +57,8 @@ static void __forceinline XA_decode_block(s16* buffer, const s16* block, s32& pr
 	}
 }
 
-static void __forceinline IncrementNextA(V_Core& thiscore, V_Voice& vc, uint voiceidx)
+// static void __forceinline IncrementNextA(V_Core& thiscore, V_Voice& vc, uint voiceidx)
+static void IncrementNextA(V_Core& thiscore, V_Voice& vc, uint voiceidx)
 {
 	// Important!  Both cores signal IRQ when an address is read, regardless of
 	// which core actually reads the address.
@@ -85,7 +87,8 @@ PcmCacheEntry pcm_cache_data[pcm_BlockCount];
 #define XAFLAG_LOOP (1ul << 1)
 #define XAFLAG_LOOP_START (1ul << 2)
 
-static __forceinline s32 GetNextDataBuffered(V_Core& thiscore, V_Voice& vc, uint voiceidx)
+// static __forceinline s32 GetNextDataBuffered(V_Core& thiscore, V_Voice& vc, uint voiceidx)
+static s32 GetNextDataBuffered(V_Core& thiscore, V_Voice& vc, uint voiceidx)
 {
 	if ((vc.SCurrent & 3) == 0)
 	{
@@ -169,7 +172,8 @@ static __forceinline s32 GetNextDataBuffered(V_Core& thiscore, V_Voice& vc, uint
 	return vc.SBuffer[vc.SCurrent++];
 }
 
-static __forceinline void GetNextDataDummy(V_Core& thiscore, V_Voice& vc, uint voiceidx)
+// static __forceinline void GetNextDataDummy(V_Core& thiscore, V_Voice& vc, uint voiceidx)
+static void GetNextDataDummy(V_Core& thiscore, V_Voice& vc, uint voiceidx)
 {
 	IncrementNextA(thiscore, vc, voiceidx);
 
@@ -202,7 +206,8 @@ static __forceinline void GetNextDataDummy(V_Core& thiscore, V_Voice& vc, uint v
 	vc.SCurrent += 4 - (vc.SCurrent & 3);
 }
 
-static void __forceinline UpdatePitch(V_Voice& vc, uint coreidx, uint voiceidx)
+// static void __forceinline UpdatePitch(V_Voice& vc, uint coreidx, uint voiceidx)
+static void UpdatePitch(V_Voice& vc, uint coreidx, uint voiceidx)
 {
 	s32 pitch;
 	// [Air] : re-ordered comparisons: Modulated is much more likely to be zero than voice,
@@ -218,7 +223,8 @@ static void __forceinline UpdatePitch(V_Voice& vc, uint coreidx, uint voiceidx)
 	vc.SP    += pitch;
 }
 
-static __forceinline void CalculateADSR(V_Core& thiscore, V_Voice& vc, uint voiceidx)
+// static __forceinline void CalculateADSR(V_Core& thiscore, V_Voice& vc, uint voiceidx)
+static void CalculateADSR(V_Core& thiscore, V_Voice& vc, uint voiceidx)
 {
 	if (vc.ADSR.Phase == PHASE_STOPPED)
 		vc.ADSR.Value = 0;
@@ -229,7 +235,8 @@ static __forceinline void CalculateADSR(V_Core& thiscore, V_Voice& vc, uint voic
 	}
 }
 
-static __forceinline s32 GetVoiceValues(V_Core& thiscore, V_Voice& vc, uint voiceidx)
+// static __forceinline s32 GetVoiceValues(V_Core& thiscore, V_Voice& vc, uint voiceidx)
+static s32 GetVoiceValues(V_Core& thiscore, V_Voice& vc, uint voiceidx)
 {
 	while (vc.SP >= 0)
 	{
@@ -256,7 +263,8 @@ static __forceinline s32 GetVoiceValues(V_Core& thiscore, V_Voice& vc, uint voic
 
 // This is Dr. Hell's noise algorithm as implemented in pcsxr
 // Supposedly this is 100% accurate
-static __forceinline void UpdateNoise(V_Core& thiscore)
+// static __forceinline void UpdateNoise(V_Core& thiscore)
+static void UpdateNoise(V_Core& thiscore)
 {
 	static const uint8_t noise_add[64] = {
 		1, 0, 0, 1, 0, 1, 1, 0,
@@ -300,7 +308,8 @@ static __forceinline void UpdateNoise(V_Core& thiscore)
 // writes a signed value to the SPU2 ram
 // Performs no cache invalidation -- use only for dynamic memory ranges
 // of the SPU2 (between 0x0000 and SPU2_DYN_MEMLINE)
-static __forceinline void spu2M_WriteFast(u32 addr, s16 value)
+// static __forceinline void spu2M_WriteFast(u32 addr, s16 value)
+static void spu2M_WriteFast(u32 addr, s16 value)
 {
 	// Fixes some of the oldest hangs in pcsx2's history! :p
 	for (int i = 0; i < 2; i++)
@@ -365,7 +374,8 @@ static void V_VolumeSlide_Update(V_VolumeSlide &vs)
 	}
 }
 
-static __forceinline StereoOut32 MixVoice(V_Core& thiscore, V_Voice& vc, uint coreidx, uint voiceidx)
+// static __forceinline StereoOut32 MixVoice(V_Core& thiscore, V_Voice& vc, uint coreidx, uint voiceidx)
+static StereoOut32 MixVoice(V_Core& thiscore, V_Voice& vc, uint coreidx, uint voiceidx)
 {
 	StereoOut32 voiceOut;
 	s32 Value      = 0;
@@ -419,7 +429,8 @@ static __forceinline StereoOut32 MixVoice(V_Core& thiscore, V_Voice& vc, uint co
 	return voiceOut;
 }
 
-static __forceinline void MixCoreVoices(VoiceMixSet& dest, const uint coreidx)
+// static __forceinline void MixCoreVoices(VoiceMixSet& dest, const uint coreidx)
+static void MixCoreVoices(VoiceMixSet& dest, const uint coreidx)
 {
 	V_Core& thiscore(Cores[coreidx]);
 

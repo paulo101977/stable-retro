@@ -79,7 +79,8 @@ void WriteCP0Config(u32 value)
 
 #define PERF_ShouldCountEvent(evt) ((evt >= 1  && evt <= 3) || (evt >= 12 && evt <= 15))
 
-__fi void COP0_UpdatePCCR(void)
+// __fi void COP0_UpdatePCCR(void)
+void COP0_UpdatePCCR(void)
 {
 	// Counting and counter exceptions are not performed if we are 
 	// currently executing a Level 2 exception (ERL)
