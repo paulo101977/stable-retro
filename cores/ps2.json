@@ -1,0 +1,15 @@
+{
+    "ps2": {
+        "lib": "pcsx2",
+        "ext": ["iso", "ps2"],
+        "keybinds": ["X", "Z", "TAB", "ENTER", "UP", "DOWN", "LEFT", "RIGHT", "C", "A", "S", "D", "Q", "W", "E", "R", "F", "V"],
+        "buttons": ["CROSS", "CIRCLE", "SQUARE", "TRIANGLE", "L1", "R1", "L2", "R2", "START", "SELECT", "L3", "R3", "UP", "DOWN", "LEFT", "RIGHT"],
+        "types": ["|u1", ">u2", ">u4", "|i1", ">i2", ">i4", "|d1", ">d2", ">d4", "<d4", ">d6", ">d8", ">n4", ">n6", ">n8"],
+        "overlay": ["=", ">", 2],
+        "actions": [
+            [[], ["UP"], ["DOWN"]],
+            [[], ["LEFT"], ["RIGHT"]],
+            [[], ["CROSS"], ["CIRCLE"], ["SQUARE"], ["TRIANGLE"], ["L1"], ["R1"], ["L2"], ["R2"], ["START"], ["SELECT"]]
+        ]
+    }
+}
