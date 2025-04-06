@@ -8,5 +8,5 @@ zipcmp=/usr/local/bin/zipcmp
 Name: libzip
 Description: library for handling zip archives
 Version: 1.4.0
-Libs:  -L${libdir} -lzip  -lz
+Libs:  -L${libdir} -lzip  -lbz2 -lz
 Cflags: -I${includedir}

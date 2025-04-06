@@ -73,6 +73,7 @@ If you plan to integrate new ROMs, states or emulator cores or plan to edit an e
 git clone https://github.com/Farama-Foundation/stable-retro.git
 cd stable-retro
 pip3 install -e .
+CMAKE_ARGS="-DCMAKE_POLICY_DEFAULT_CMP0074=NEW" pip install . --no-build-isolation --verbose --break-system-packages
 ```
 
 #### Apple Silicon Installation (Tested on python3.10)
@@ -89,6 +90,7 @@ pip3 install -e .
 1. build package from source
 2. `cmake . -DCMAKE_PREFIX_PATH=/usr/local/opt/qt -DBUILD_UI=ON -UPYLIB_DIRECTORY`
 3. `make -j$(sysctl hw.ncpu | cut -d: -f2)`
+ or ` make -j$(sysctl hw.ncpu | cut -d: -f2) CXXFLAGS="-fno-lto" CFLAGS="-fno-lto"`
 4. `open "Gym Retro Integration.app"`
 
 Docker image for M1 Macs:

@@ -1,5 +1,9 @@
 {
   "info": {
+    "health": {
+      "address": 23396,
+      "type": ">d2"
+    },
     "p1_health": {
       "address": 33822,
       "type": ">d8"

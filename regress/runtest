@@ -34,11 +34,11 @@
 
 use strict;
 
-BEGIN { push @INC, '/home/paulo101977/project/stable-retro/third-party/libzip/regress'; }
+BEGIN { push @INC, '/home/paulo101977/project/my_retro/third-party/libzip/regress'; }
 
 use NiHTest;
 
-my $test = NiHTest::new({ default_program => 'ziptool_regress', srcdir => '/home/paulo101977/project/stable-retro/third-party/libzip/regress', top_builddir => '/home/paulo101977/project/stable-retro', zipcmp => '../../src/zipcmp', zipcmp_flags => '-p' });
+my $test = NiHTest::new({ default_program => 'ziptool_regress', srcdir => '/home/paulo101977/project/my_retro/third-party/libzip/regress', top_builddir => '/home/paulo101977/project/my_retro', zipcmp => '../../src/zipcmp', zipcmp_flags => '-p' });
 
 sub mangle_test {
 	my ($test, $variant) = @_;

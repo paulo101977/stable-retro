@@ -1,0 +1,12 @@
+{
+  "info": {
+    "p1_health": {
+      "address": 8264354,
+      "type": "|i1"
+    },
+    "position": {
+      "address": 8272400,
+      "type": ">n4"
+    }
+  }
+}

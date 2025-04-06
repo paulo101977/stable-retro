@@ -24,7 +24,7 @@
 #define HAVE_FSEEKO
 #define HAVE_FTELLO
 /* #undef HAVE_GETPROGNAME */
-/* #undef HAVE_LIBBZ2 */
+#define HAVE_LIBBZ2
 #define HAVE_OPEN
 #define HAVE_MKSTEMP
 /* #undef HAVE_SETMODE */

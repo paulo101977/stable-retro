@@ -77,13 +77,14 @@ platform_globs = [
         "GbAdvance",
         "32x",
         "Saturn",
-        "ps2",
+        "Ps1",
     ]
 ]
 
 
 setup(
-    name="stable-retro",
+    # name="stable-retro",
+    name="my_retro",
     long_description=README,
     long_description_content_type="text/markdown",
     author="Farama Foundation",
@@ -110,6 +111,7 @@ setup(
         "retro.examples",
         "retro.testing",
     ],
+    package_dir={"my_retro": "retro"},
     package_data={
         "retro": [
             "cores/*.json",
