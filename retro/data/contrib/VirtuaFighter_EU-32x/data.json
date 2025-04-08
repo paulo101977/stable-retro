@@ -11,6 +11,10 @@
     "time": {
       "address": 33832,
       "type": ">d4"
+    },
+    "winners_losers": {
+      "address": 33814,
+      "type": ">d2"
     }
   }
 }

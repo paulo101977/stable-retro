@@ -2,15 +2,21 @@
     "Ps1": {
         "lib": "pcsx_rearmed",
         "ext": ["bin", "cue", "img", "iso", "pbp", "ps1"],
-        "keybinds": ["Z", "X", "A", "S", "UP", "DOWN", "LEFT", "RIGHT", "ENTER", "BACKSPACE"],
-        "buttons": ["CROSS", "CIRCLE", "SQUARE", "TRIANGLE", "UP", "DOWN", "LEFT", "RIGHT", "START", "SELECT"],
+        "keybinds": ["Z", "A", "Backspace", "Enter", "UP", "DOWN", "LEFT", "RIGHT", "X", "S", "Q", "W", "E", "R", "T", "Y"],
+        "buttons": ["B", "Y", "SELECT", "START", "UP", "DOWN", "LEFT", "RIGHT", "A", "X", "L", "R", "L2", "R2", "L3", "R3"],
         "actions": [
             [[], ["UP"], ["DOWN"]],
             [[], ["LEFT"], ["RIGHT"]],
-            [[], ["CROSS"]],
-            [[], ["CIRCLE"]],
-            [[], ["SQUARE"]],
-            [[], ["TRIANGLE"]],
+            [[], ["B"]],
+            [[], ["Y"]],
+            [[], ["A"]],
+            [[], ["X"]],
+            [[], ["L1"]],
+            [[], ["R1"]],
+            [[], ["L2"]],
+            [[], ["R2"]],
+            [[], ["L3"]],
+            [[], ["R3"]],
             [[], ["START"]],
             [[], ["SELECT"]]
         ]
