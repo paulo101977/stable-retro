@@ -78,6 +78,7 @@ platform_globs = [
         "32x",
         "Saturn",
         "Ps1",
+        "Dolphin"
     ]
 ]
 

@@ -227,6 +227,8 @@ extern "C" {
 #define RETRO_REGION_NTSC  0
 #define RETRO_REGION_PAL   1
 
+#define RETRO_ENVIRONMENT_GET_PREFERRED_HW_RENDER 56
+
 /* Id values for LANGUAGE */
 enum retro_language
 {

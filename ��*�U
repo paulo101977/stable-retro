@@ -1,0 +1,10 @@
+[Core]
+DPL2Decoder = False
+GFXBackend = OGL
+[General]
+ISOPaths = 0
+RecursiveISOPaths = False
+ShowFrameCount = False
+ShowLag = False
+UseDiscordPresence = False
+WirelessMac = 

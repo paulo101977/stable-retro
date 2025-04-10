@@ -244,6 +244,7 @@ add_core(pce mednafen_pce_fast)
 add_core(32x picodrive)
 add_core(saturn mednafen_saturn)
 add_core(ps1 pcsx_rearmed)
+add_core(dolphin dolphin)
 
 set(CLEAN_CORES)
 
@@ -323,7 +324,12 @@ else()
   include_directories(third-party/libzip third-party/libzip/lib)
 endif()
 
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    add_compile_options(-mavx)
+endif()
+
 include_directories(${LUA_INCLUDE_DIRS})
+
 
 add_library(
   retro-base STATIC
@@ -381,6 +387,12 @@ if(BUILD_PYTHON)
 
   target_link_libraries(retro retro-base ${PYBIND_LIBS} ${STATIC_LDFLAGS})
 endif()
+
+find_package(SDL2 REQUIRED)
+include_directories(${SDL2_INCLUDE_DIRS})
+target_link_libraries(retro-base ${SDL2_LIBRARIES})
+find_package(OpenGL REQUIRED)
+target_link_libraries(retro-base OpenGL::GL)
 
 if(BUILD_TESTS)
   enable_testing()

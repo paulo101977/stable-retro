@@ -57,6 +57,8 @@ public:
 	std::vector<std::string> buttons() const;
 	std::vector<std::string> keybinds() const;
 
+	void swapBuffers();
+
 private:
 	bool loadCore(const std::string& corePath);
 	void fixScreenSize(const std::string& romName);
@@ -70,6 +72,11 @@ private:
 	static int16_t cbInputState(unsigned port, unsigned device, unsigned index, unsigned id);
 
 	bool m_buttonMask[MAX_PLAYERS][N_BUTTONS]{};
+
+	// Gamecube
+	retro_hw_render_callback m_hwRenderCallback;
+
+	bool initializeSDLWindow();
 
 	// Video frame info
 	const void* m_imgData = nullptr;

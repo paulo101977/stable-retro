@@ -12,12 +12,16 @@
 #include "data.h"
 #include "emulator.h"
 #include "libretro.h"
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_opengl.h>
 
 #ifndef _WIN32
 #define GETSYM dlsym
 #else
 #define GETSYM GetProcAddress
 #endif
+
+#define RETRO_HW_RENDER_CONTEXT_NEGOTIATION_INTERFACE_V1 1
 
 using namespace std;
 
@@ -28,7 +32,43 @@ static Emulator* s_loadedEmulator = nullptr;
 static map<string, const char*> s_envVariables = {
 	{ "genesis_plus_gx_bram", "per game" },
 	{ "genesis_plus_gx_render", "single field" },
-	{ "genesis_plus_gx_blargg_ntsc_filter", "disabled" }
+	{ "genesis_plus_gx_blargg_ntsc_filter", "disabled" },
+	// {"dolphin_log_level", "Debug"},
+	// {"dolphin_emulation_speed", "unlimited"},
+	// {"dolphin_fastmem", "true"},
+	// {"dolphin_dsp_hle", "true"},
+	// {"dolphin_dsp_jit", "true"},
+	// {"dolphin_cpu_core", "JIT64"},
+	// {"dolphin_language", "English"},
+	// {"dolphin_cpu_clock_rate", "100%"},
+	// {"dolphin_wiimote_continuous_scanning", "false"},
+	// {"dolphin_cheats_enabled", "false"},
+	// {"dolphin_osd_enabled", "true"},
+	// {"dolphin_fast_disc_speed", "false"},
+	// {"dolphin_widescreen_hack", "false"},
+	// {"dolphin_progressive_scan", "true"},
+	// {"dolphin_pal60", "true"},
+	// {"dolphin_sensor_bar_position", "Top"},
+	// {"dolphin_enable_rumble", "true"},
+	// {"dolphin_efb_scale", "x1 (640 x 528)"},
+	// {"dolphin_shader_compilation_mode", "sync"},
+	// {"dolphin_max_anisotropy", "1x"},
+	// {"dolphin_skip_dupe_frames", "true"},
+	// {"dolphin_immediate_xfb", "false"},
+	// {"dolphin_efb_scaled_copy", "true"},
+	// {"dolphin_efb_to_texture", "true"},
+	// {"dolphin_efb_to_vram", "false"},
+	// {"dolphin_fast_depth_calculation", "true"},
+	// {"dolphin_bbox_enabled", "false"},
+	// {"dolphin_gpu_texture_decoding", "true"},
+	// {"dolphin_wait_for_shaders", "true"},
+	// {"dolphin_force_texture_filtering", "false"},
+	// {"dolphin_load_custom_textures", "false"},
+	// {"dolphin_cache_custom_textures", "false"},
+	// {"dolphin_texture_cache_accuracy", "Middle"},
+	// {"dolphin_anti_aliasing", "None"},
+	// {"dolphin_renderer", "Hardware"},
+	// {"dolphin_mixer_rate", "48000"}
 };
 
 static void (*retro_init)(void);
@@ -73,10 +113,13 @@ bool Emulator::isLoaded() {
 	return s_loadedEmulator;
 }
 
+
 bool Emulator::loadRom(const string& romPath) {
 	if (m_romLoaded) {
 		unloadRom();
 	}
+
+	std::cout << "[BOOT]: Booting from disc: " << romPath  << std::endl;
 
 	auto core = coreForRom(romPath);
 	if (core.size() == 0) {
@@ -125,10 +168,13 @@ bool Emulator::loadRom(const string& romPath) {
 	auto res = retro_load_game(&gameInfo);
 	delete[] romData;
 	if (!res) {
+		std::cerr << "Fail on load the game!" << std::endl;
 		return false;
 	}
 	retro_get_system_av_info(&m_avInfo);
 	fixScreenSize(romPath);
+
+	std::cout << "After fixScreenSize >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> \n" << std::endl;
 
 	m_romLoaded = true;
 	m_romPath = romPath;
@@ -138,8 +184,10 @@ bool Emulator::loadRom(const string& romPath) {
 void Emulator::run() {
 	assert(s_loadedEmulator == this);
 	m_audioData.clear();
+	std::cout << "Run >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>!" << std::endl;
 	retro_run();
 }
+
 
 void Emulator::reset() {
 	assert(s_loadedEmulator == this);
@@ -205,6 +253,10 @@ bool Emulator::serialize(void* data, size_t size) {
 
 bool Emulator::unserialize(const void* data, size_t size) {
 	assert(s_loadedEmulator == this);
+
+	if (!data || size == 0)
+		return true;
+
 	try {
 		retro_system_info systemInfo;
 		retro_get_system_info(&systemInfo);
@@ -339,7 +391,7 @@ void Emulator::reconfigureAddressSpace() {
 // callback for logging from emulator
 // turned off by default to avoid spamming the log, only used for debugging issues within cores
 static void cbLog(enum retro_log_level level, const char *fmt, ...) {
-#if 0
+// #if 0
 	char buffer[4096] = {0};
 	static const char * levelName[] = { "DEBUG", "INFO", "WARNING", "ERROR" };
 	va_list va;
@@ -352,11 +404,26 @@ static void cbLog(enum retro_log_level level, const char *fmt, ...) {
 		return;
 
 	std::cerr << "[" << levelName[level] << "] " << buffer << std::flush;
-#endif
+// #endif
 }
+
+uintptr_t retro_hw_get_current_framebuffer() {
+    GLint fbo = 0;
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &fbo);
+    return static_cast<uintptr_t>(fbo);
+}
+
+retro_proc_address_t retro_hw_get_proc_address(const char *symbol) {
+    return (retro_proc_address_t)SDL_GL_GetProcAddress(symbol);
+}
+
+
 
 bool Emulator::cbEnvironment(unsigned cmd, void* data) {
 	assert(s_loadedEmulator);
+
+	std::cout << "[cbEnvironment] cmd: " << cmd << std::endl;
+
 	switch (cmd) {
 	case RETRO_ENVIRONMENT_SET_PIXEL_FORMAT:
 		switch (*reinterpret_cast<retro_pixel_format*>(data)) {
@@ -376,17 +443,31 @@ bool Emulator::cbEnvironment(unsigned cmd, void* data) {
 		return true;
 	case RETRO_ENVIRONMENT_GET_VARIABLE: {
 		struct retro_variable* var = reinterpret_cast<struct retro_variable*>(data);
+		std::cout << "  GET_VARIABLE key: " << var->key << std::endl;
 		if (s_envVariables.count(string(var->key))) {
 			var->value = s_envVariables[string(var->key)];
+			std::cout << "  => resolved " << var->key << " = " << var->value << "\n";
 			return true;
 		}
+		std::cout << "  => missing key: " << var->key << "\n";
 		return false;
 	}
 	case RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY:
-		if (!s_loadedEmulator->m_corePath) {
-			s_loadedEmulator->m_corePath = strdup(corePath().c_str());
+		retro_system_info systemInfo;
+		retro_get_system_info(&systemInfo);
+
+		std::cout << "  => Lib name >>>>>>>>>>>>>>>>>>>>>>>: " << systemInfo.library_name << "\n";
+		if (std::string(systemInfo.library_name) == "dolphin-emu") {
+			static std::string dolphinSystemDir = "./retro/cores";
+			*reinterpret_cast<const char**>(data) = dolphinSystemDir.c_str();
+			std::cout << "[Dolphin] System directory set to: " << dolphinSystemDir << std::endl;
 		}
-		*reinterpret_cast<const char**>(data) = s_loadedEmulator->m_corePath;
+		else {
+			if (!s_loadedEmulator->m_corePath) {
+				s_loadedEmulator->m_corePath = strdup(corePath().c_str());
+			}
+			*reinterpret_cast<const char**>(data) = s_loadedEmulator->m_corePath;
+		}
 		return true;
 	case RETRO_ENVIRONMENT_GET_CAN_DUPE:
 		*reinterpret_cast<bool*>(data) = true;
@@ -405,6 +486,17 @@ bool Emulator::cbEnvironment(unsigned cmd, void* data) {
 		cb->log = cbLog;
 		return true;
 	}
+
+	// GameCube
+	case RETRO_ENVIRONMENT_GET_PREFERRED_HW_RENDER:
+	case RETRO_ENVIRONMENT_SET_HW_RENDER:
+	case RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME:
+	case RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY:
+	case RETRO_ENVIRONMENT_GET_USERNAME:
+	case RETRO_ENVIRONMENT_SET_HW_RENDER_CONTEXT_NEGOTIATION_INTERFACE:
+	case RETRO_ENVIRONMENT_SET_FRAME_TIME_CALLBACK:
+	case RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS:
+		return true;
 	default:
 		return false;
 	}
@@ -413,6 +505,8 @@ bool Emulator::cbEnvironment(unsigned cmd, void* data) {
 
 void Emulator::cbVideoRefresh(const void* data, unsigned width, unsigned height, size_t pitch) {
 	assert(s_loadedEmulator);
+
+	std::cout << "[cbVideoRefresh] called! " << width << "x" << height << " pitch: " << pitch << std::endl;
 
 	if (data) {
 		s_loadedEmulator->m_imgData = data;
