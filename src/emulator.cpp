@@ -339,7 +339,7 @@ void Emulator::reconfigureAddressSpace() {
 // callback for logging from emulator
 // turned off by default to avoid spamming the log, only used for debugging issues within cores
 static void cbLog(enum retro_log_level level, const char *fmt, ...) {
-#if 0
+// #if 0
 	char buffer[4096] = {0};
 	static const char * levelName[] = { "DEBUG", "INFO", "WARNING", "ERROR" };
 	va_list va;
@@ -352,11 +352,14 @@ static void cbLog(enum retro_log_level level, const char *fmt, ...) {
 		return;
 
 	std::cerr << "[" << levelName[level] << "] " << buffer << std::flush;
-#endif
+// #endif
 }
 
 bool Emulator::cbEnvironment(unsigned cmd, void* data) {
 	assert(s_loadedEmulator);
+
+	std::cout << "[cbEnvironment] cmd: " << cmd << std::endl;
+
 	switch (cmd) {
 	case RETRO_ENVIRONMENT_SET_PIXEL_FORMAT:
 		switch (*reinterpret_cast<retro_pixel_format*>(data)) {
@@ -387,6 +390,8 @@ bool Emulator::cbEnvironment(unsigned cmd, void* data) {
 			s_loadedEmulator->m_corePath = strdup(corePath().c_str());
 		}
 		*reinterpret_cast<const char**>(data) = s_loadedEmulator->m_corePath;
+
+		std::cout << "Core path >>>>>>>>>>>>>>>>>>>>>> " << s_loadedEmulator->m_corePath << std::endl;
 		return true;
 	case RETRO_ENVIRONMENT_GET_CAN_DUPE:
 		*reinterpret_cast<bool*>(data) = true;
@@ -405,6 +410,23 @@ bool Emulator::cbEnvironment(unsigned cmd, void* data) {
 		cb->log = cbLog;
 		return true;
 	}
+
+	// ppsspp
+	case RETRO_ENVIRONMENT_SET_VARIABLES:
+	{
+		const struct retro_variable *vars = static_cast<const struct retro_variable *>(data);
+		while (vars && vars->key) {
+			std::cout << "Libretro Variable: " << vars->key << " = " << vars->value << std::endl;
+			++vars;
+		}
+		return true;
+	}
+
+	case RETRO_ENVIRONMENT_SET_HW_RENDER:
+	case RETRO_ENVIRONMENT_SET_HW_SHARED_CONTEXT:
+		return true;
+
+
 	default:
 		return false;
 	}

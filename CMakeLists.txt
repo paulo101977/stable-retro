@@ -244,6 +244,7 @@ add_core(pce mednafen_pce_fast)
 add_core(32x picodrive)
 add_core(saturn mednafen_saturn)
 add_core(ps1 pcsx_rearmed)
+add_core(ppsspp ppsspp)
 
 set(CLEAN_CORES)
 

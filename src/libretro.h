@@ -920,6 +920,7 @@ enum retro_mod
                                             * A frontend must make sure that the pointer obtained from this function is
                                             * writeable (and readable).
                                             */
+#define RETRO_ENVIRONMENT_SET_HW_SHARED_CONTEXT (44 | RETRO_ENVIRONMENT_EXPERIMENTAL)
 
 enum retro_hw_render_interface_type
 {
