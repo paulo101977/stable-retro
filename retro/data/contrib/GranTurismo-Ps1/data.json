@@ -1,0 +1,20 @@
+{
+  "info": {
+    "lap_count": {
+      "address": 735643,
+      "type": "<>u4"
+    },
+    "position": {
+      "address": 749336,
+      "type": "<>u4"
+    },
+    "speed": {
+      "address": 746750,
+      "type": ">=d4"
+    },
+    "wrong_way": {
+      "address": 749604,
+      "type": "<d2"
+    }
+  }
+}
