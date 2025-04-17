@@ -1,0 +1,24 @@
+{
+    "Ps2": {
+        "lib": "pcsx2",
+        "ext": ["iso"],
+        "keybinds": ["Z", "A", "Backspace", "Return", "UP", "DOWN", "LEFT", "RIGHT", "X", "S", "Q", "W", "E", "R", "T", "Y"],
+        "buttons": ["B", "Y", "SELECT", "START", "UP", "DOWN", "LEFT", "RIGHT", "A", "X", "L", "R", "L2", "R2", "L3", "R3"],
+        "actions": [
+            [[], ["UP"], ["DOWN"]],
+            [[], ["LEFT"], ["RIGHT"]],
+            [[], ["B"]],
+            [[], ["Y"]],
+            [[], ["A"]],
+            [[], ["X"]],
+            [[], ["L1"]],
+            [[], ["R1"]],
+            [[], ["L2"]],
+            [[], ["R2"]],
+            [[], ["L3"]],
+            [[], ["R3"]],
+            [[], ["START"]],
+            [[], ["SELECT"]]
+        ]
+    }
+}

@@ -28,7 +28,36 @@ static Emulator* s_loadedEmulator = nullptr;
 static map<string, const char*> s_envVariables = {
 	{ "genesis_plus_gx_bram", "per game" },
 	{ "genesis_plus_gx_render", "single field" },
-	{ "genesis_plus_gx_blargg_ntsc_filter", "disabled" }
+	{ "genesis_plus_gx_blargg_ntsc_filter", "disabled" },
+	{ "pcsx2_upscale_multiplier", "1" },
+	{ "pcsx2_palette_conversion" , "disabled" },
+	{ "pcsx2_userhack_fb_conversion" , "disabled" },
+	{ "pcsx2_userhack_auto_flush" , "disabled"}, 
+	{ "pcsx2_fast_invalidation" , "disabled" },
+	{ "pcsx2_speedhacks_presets" , "1" },
+	{ "pcsx2_memcard_slot_1" , "legacy" },
+	{ "pcsx2_memcard_slot_2" , "empty" },
+	{ "pcsx2_fastcdvd" , "disabled" },
+	{ "pcsx2_deinterlace_mode" , "7" },
+	{ "pcsx2_enable_60fps_patches" , "disabled" },
+	{ "pcsx2_enable_widescreen_patches" , "disabled" },
+	{ "pcsx2_vsync_mtgs_queue" , "2" },
+	{ "pcsx2_enable_cheats" , "disabled" },
+	{ "pcsx2_clamping_mode" , "1" },
+	{ "pcsx2_round_mode" , "3" },
+	{ "pcsx2_vu_clamping_mode" , "1" },
+	{ "pcsx2_vu_round_mode" , "3" },
+	{ "pcsx2_gamepad_l_deadzone" ,"0" },
+	{ "pcsx2_gamepad_r_deadzone" , "0" },
+	{ "pcsx2_system_language",  "English"},
+	{ "pcsx2_renderer" , "Auto"},
+	{ "pcsx2_boot_bios", "disabled"},
+	{ "pcsx2_rumble_intensity", "100"},
+	{ "pcsx2_rumble_enable", "disabled"},
+	{ "pcsx2_bios", "SCPH70004.bin"},
+	{ "pcsx2_fastboot", "enabled"},
+	{ "pcsx2_userhack_preload_frame_data", "disabled"},
+	{ "pcsx2_aspect_ratio", "0" }
 };
 
 static void (*retro_init)(void);
@@ -74,14 +103,21 @@ bool Emulator::isLoaded() {
 }
 
 bool Emulator::loadRom(const string& romPath) {
+
+	printf("[loadRom]\n");
+
 	if (m_romLoaded) {
 		unloadRom();
 	}
+
+	printf("[loadRom after unloadRom]\n");
 
 	auto core = coreForRom(romPath);
 	if (core.size() == 0) {
 		return false;
 	}
+
+	printf("[loadRom after core.size]\n");
 
 	if (m_coreHandle && m_core != core) {
 		unloadCore();
@@ -100,6 +136,11 @@ bool Emulator::loadRom(const string& romPath) {
 		}
 		m_core = core;
 	}
+	
+	retro_system_info systemInfo;
+	retro_get_system_info(&systemInfo);
+
+	printf("[loadRom after unloadCore]\n");
 
 	retro_game_info gameInfo;
 	ifstream in(romPath, ios::binary | ios::ate);
@@ -114,6 +155,22 @@ bool Emulator::loadRom(const string& romPath) {
 	char* romData = new char[gameInfo.size];
 	gameInfo.path = romPath.c_str();
 	gameInfo.data = romData;
+
+	if(!strcmp(systemInfo.library_name, "LRPS2 (alpha)")) {
+		printf("PS2 core\n");
+		
+		gameInfo.path = romPath.c_str();
+		gameInfo.data = nullptr;
+		gameInfo.size = 0;
+		gameInfo.meta = nullptr;
+
+		auto retro_set_controller_port_device = reinterpret_cast<void (*)(unsigned, unsigned)>(GETSYM(m_coreHandle, "retro_set_controller_port_device"));
+		if (retro_set_controller_port_device) {
+			retro_set_controller_port_device(0, RETRO_DEVICE_JOYPAD);
+			retro_set_controller_port_device(1, RETRO_DEVICE_JOYPAD);
+		}
+	}
+
 	in.seekg(0, ios::beg);
 	in.read(romData, gameInfo.size);
 	if (in.fail()) {
@@ -121,6 +178,7 @@ bool Emulator::loadRom(const string& romPath) {
 		return false;
 	}
 	in.close();
+	printf("[loadRom after in.close]\n");
 
 	auto res = retro_load_game(&gameInfo);
 	delete[] romData;
@@ -132,6 +190,8 @@ bool Emulator::loadRom(const string& romPath) {
 
 	m_romLoaded = true;
 	m_romPath = romPath;
+
+	printf("[loadRom ok>>>>>>>>>]\n");
 	return true;
 }
 
@@ -339,7 +399,7 @@ void Emulator::reconfigureAddressSpace() {
 // callback for logging from emulator
 // turned off by default to avoid spamming the log, only used for debugging issues within cores
 static void cbLog(enum retro_log_level level, const char *fmt, ...) {
-#if 0
+// #if 0
 	char buffer[4096] = {0};
 	static const char * levelName[] = { "DEBUG", "INFO", "WARNING", "ERROR" };
 	va_list va;
@@ -352,11 +412,14 @@ static void cbLog(enum retro_log_level level, const char *fmt, ...) {
 		return;
 
 	std::cerr << "[" << levelName[level] << "] " << buffer << std::flush;
-#endif
+// #endif
 }
 
 bool Emulator::cbEnvironment(unsigned cmd, void* data) {
 	assert(s_loadedEmulator);
+
+	printf("[cbEnvironment] ---> %d\n", cmd);
+
 	switch (cmd) {
 	case RETRO_ENVIRONMENT_SET_PIXEL_FORMAT:
 		switch (*reinterpret_cast<retro_pixel_format*>(data)) {
@@ -378,7 +441,10 @@ bool Emulator::cbEnvironment(unsigned cmd, void* data) {
 		struct retro_variable* var = reinterpret_cast<struct retro_variable*>(data);
 		if (s_envVariables.count(string(var->key))) {
 			var->value = s_envVariables[string(var->key)];
+			printf("[RETRO_ENVIRONMENT_GET_VARIABLE] %s = %s\n", var->key, var->value);
 			return true;
+		} else {
+			printf("[RETRO_ENVIRONMENT_GET_VARIABLE] not found %s\n", var->key);
 		}
 		return false;
 	}
@@ -405,6 +471,28 @@ bool Emulator::cbEnvironment(unsigned cmd, void* data) {
 		cb->log = cbLog;
 		return true;
 	}
+
+	// pcsx2:
+	case RETRO_ENVIRONMENT_SET_HW_RENDER: {
+		const struct retro_hw_render_callback* cb = reinterpret_cast<const struct retro_hw_render_callback*>(data);
+	
+		// s_loadedEmulator->m_hwRenderCallback = *cb;
+	
+		printf("[RETRO_ENVIRONMENT_SET_HW_RENDER] context_type=%d, version=%d.%d\n",
+			   cb->context_type, cb->version_major, cb->version_minor);
+	
+		return true;
+	}
+
+	case RETRO_ENVIRONMENT_SET_GEOMETRY: {
+		const struct retro_game_geometry* geom = reinterpret_cast<const struct retro_game_geometry*>(data);
+		printf("[RETRO_ENVIRONMENT_SET_GEOMETRY] %dx%d (max %dx%d), aspect_ratio=%.3f\n",
+			geom->base_width, geom->base_height,
+			geom->max_width, geom->max_height,
+			geom->aspect_ratio);
+		return true;
+	}
+
 	default:
 		return false;
 	}
@@ -413,6 +501,8 @@ bool Emulator::cbEnvironment(unsigned cmd, void* data) {
 
 void Emulator::cbVideoRefresh(const void* data, unsigned width, unsigned height, size_t pitch) {
 	assert(s_loadedEmulator);
+
+	printf("[cbVideoRefresh] ---> %d %d %d\n", width, height, pitch);
 
 	if (data) {
 		s_loadedEmulator->m_imgData = data;
