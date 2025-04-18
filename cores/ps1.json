@@ -1,7 +1,7 @@
 {
     "Ps1": {
         "lib": "pcsx_rearmed",
-        "ext": ["bin", "cue", "img", "iso", "pbp", "ps1"],
+        "ext": ["ps1"],
         "keybinds": ["Z", "A", "Backspace", "Enter", "UP", "DOWN", "LEFT", "RIGHT", "X", "S", "Q", "W", "E", "R", "T", "Y"],
         "buttons": ["B", "Y", "SELECT", "START", "UP", "DOWN", "LEFT", "RIGHT", "A", "X", "L", "R", "L2", "R2", "L3", "R3"],
         "actions": [

@@ -13,6 +13,7 @@
 #include "emulator.h"
 #include "libretro.h"
 
+
 #ifndef _WIN32
 #define GETSYM dlsym
 #else
@@ -28,7 +29,83 @@ static Emulator* s_loadedEmulator = nullptr;
 static map<string, const char*> s_envVariables = {
 	{ "genesis_plus_gx_bram", "per game" },
 	{ "genesis_plus_gx_render", "single field" },
-	{ "genesis_plus_gx_blargg_ntsc_filter", "disabled" }
+	{ "genesis_plus_gx_blargg_ntsc_filter", "disabled" },
+	{"reicast_sh4clock",  "200"},
+	{"reicast_region",  "USA"},
+	{"reicast_broadcast",  "NTSC"},
+	{"reicast_language",  "English"},
+	{"reicast_force_wince",  "disabled"},
+	{"reicast_force_freeplay",  "enabled"},
+	{"reicast_enable_dsp",  "enabled"},
+	{"reicast_vmu_sound",  "disabled"},
+	{"reicast_mipmapping",  "enabled"},
+	{"reicast_widescreen_hack",  "disabled"},
+	{"reicast_enable_rttb",  "disabled"},
+	{"reicast_volume_modifier_enable",  "enabled"},
+	{"reicast_texupscale",  "1"},
+	{"reicast_texupscale_max_filtered_texture_size",  "256"},
+	{"reicast_custom_textures",  "disabled"},
+	{"reicast_dump_textures",  "disabled"},
+	{"reicast_fog",  "enabled"},
+	{"reicast_delay_frame_swapping",  "disabled"},
+	{"reicast_widescreen_cheats",  "disabled"},
+	{"reicast_frame_skipping",  "disabled"},
+	{"reicast_auto_skip_frame",  "disabled"},
+	{"reicast_threaded_rendering",  "enabled"},
+	{"reicast_anisotropic_filtering",  "4"},
+	{"reicast_texture_filtering",  "0"},
+	{"reicast_pvr2_filtering",  "disabled"},
+	{"reicast_oit_layers",  "32"},
+	{"reicast_native_depth_interpolation",  "disabled"},
+	{"reicast_emulate_framebuffer",  "disabled"},
+	{"reicast_hle_bios",  "disabled"},
+	{"reicast_gdrom_fast_loading",  "disabled"},
+	{"reicast_dc_32mb_mod",  "disabled"},
+	{"reicast_emulate_bba",  "disabled"},
+	{"reicast_upnp",  "enabled"},
+	{"reicast_network_output",  "disabled"},
+	{"reicast_per_content_vmus",  "disabled"},
+	{"reicast_screen_rotation",  "horizontal"},
+	{"reicast_internal_resolution",  "1920x1440"},
+	{"reicast_boot_to_bios",  "disabled"},
+	{"reicast_alpha_sorting",  "per-triangle (normal)"},
+	{"reicast_oit_abuffer_size",  "512MB"},
+	{"reicast_detect_vsync_swap_interval",  "disabled"},
+	{"reicast_cable_type",  "TV (Composite)"},
+	{"reicast_enable_purupuru",  "enabled"},
+	{"reicast_analog_stick_deadzone",  "15%"},
+	{"reicast_trigger_deadzone",  "0%"},
+	{"reicast_digital_triggers",  "disabled"},
+	{"reicast_allow_service_buttons",  "disabled"},
+	{"reicast_lightgun_crosshair_size_scaling",  "100%"},
+	{"reicast_lightgun1_crosshair",  "disabled"},
+	{"reicast_vmu1_screen_display",  "disabled"},
+	{"reicast_vmu1_screen_position",  "Upper Left"},
+	{"reicast_vmu1_screen_size_mult",  "1x"},
+	{"reicast_vmu1_screen_opacity",  "100%"},
+	{"reicast_vmu1_pixel_on_color",  "DEFAULT_ON 00"},
+	{"reicast_vmu1_pixel_off_color",  "DEFAULT_OFF 01"},
+	{"reicast_lightgun2_crosshair",  "disabled"},
+	{"reicast_vmu2_screen_display",  "disabled"},
+	{"reicast_vmu2_screen_position",  "Upper Left"},
+	{"reicast_vmu2_screen_size_mult",  "1x"},
+	{"reicast_vmu2_screen_opacity",  "100%"},
+	{"reicast_vmu2_pixel_on_color",  "DEFAULT_ON 00"},
+	{"reicast_vmu2_pixel_off_color",  "DEFAULT_OFF 01"},
+	{"reicast_lightgun3_crosshair",  "disabled"},
+	{"reicast_vmu3_screen_display",  "disabled"},
+	{"reicast_vmu3_screen_position",  "Upper Left"},
+	{"reicast_vmu3_screen_size_mult",  "1x"},
+	{"reicast_vmu3_screen_opacity",  "100%"},
+	{"reicast_vmu3_pixel_on_color",  "DEFAULT_ON 00"},
+	{"reicast_vmu3_pixel_off_color",  "DEFAULT_OFF 01"},
+	{"reicast_lightgun4_crosshair",  "disabled"},
+	{"reicast_vmu4_screen_display",  "disabled"},
+	{"reicast_vmu4_screen_position",  "Upper Left"},
+	{"reicast_vmu4_screen_size_mult",  "1x"},
+	{"reicast_vmu4_screen_opacity",  "100%"},
+	{"reicast_vmu4_pixel_on_color",  "DEFAULT_ON 00"},
+	{"reicast_vmu4_pixel_off_color",  "DEFAULT_OFF 01"},
 };
 
 static void (*retro_init)(void);
@@ -74,6 +151,9 @@ bool Emulator::isLoaded() {
 }
 
 bool Emulator::loadRom(const string& romPath) {
+
+	printf("Loading ROM: %s\n", romPath.c_str());
+
 	if (m_romLoaded) {
 		unloadRom();
 	}
@@ -122,16 +202,24 @@ bool Emulator::loadRom(const string& romPath) {
 	}
 	in.close();
 
+	printf("after load core...\n");
+
 	auto res = retro_load_game(&gameInfo);
 	delete[] romData;
 	if (!res) {
 		return false;
 	}
+
+	printf("after load game...\n");
+
 	retro_get_system_av_info(&m_avInfo);
 	fixScreenSize(romPath);
 
 	m_romLoaded = true;
 	m_romPath = romPath;
+
+	printf("ROM loaded: %s\n", m_romPath.c_str());
+
 	return true;
 }
 
@@ -200,11 +288,15 @@ void Emulator::unloadRom() {
 
 bool Emulator::serialize(void* data, size_t size) {
 	assert(s_loadedEmulator == this);
+	printf("serialize size: >>>>>>>>> %zu\n", size);
 	return retro_serialize(data, size);
 }
 
 bool Emulator::unserialize(const void* data, size_t size) {
 	assert(s_loadedEmulator == this);
+
+	printf("unserialize: >>>>>>>>> \n");
+
 	try {
 		retro_system_info systemInfo;
 		retro_get_system_info(&systemInfo);
@@ -212,6 +304,11 @@ bool Emulator::unserialize(const void* data, size_t size) {
 			reset();
 		}
 
+		if (size == 0 && !strcmp(systemInfo.library_name, "Flycast")) {
+			return true;
+		}
+
+		printf("unserialize data, size: >>>>>>>>> %d\n", size);
 		return retro_unserialize(data, size);
 	} catch (...) {
 		return false;
@@ -220,7 +317,12 @@ bool Emulator::unserialize(const void* data, size_t size) {
 
 size_t Emulator::serializeSize() {
 	assert(s_loadedEmulator == this);
-	return retro_serialize_size();
+
+	printf("serialize >>>>>>>>> \n");
+
+	size_t size = retro_serialize_size();
+
+	return size;
 }
 
 void Emulator::clearCheats() {
@@ -273,6 +375,8 @@ bool Emulator::loadCore(const string& corePath) {
 	// The default according to the docs
 	m_imgDepth = 15;
 	s_loadedEmulator = this;
+	
+
 
 	retro_set_environment(cbEnvironment);
 	retro_set_video_refresh(cbVideoRefresh);
@@ -339,7 +443,7 @@ void Emulator::reconfigureAddressSpace() {
 // callback for logging from emulator
 // turned off by default to avoid spamming the log, only used for debugging issues within cores
 static void cbLog(enum retro_log_level level, const char *fmt, ...) {
-#if 0
+// #if 0
 	char buffer[4096] = {0};
 	static const char * levelName[] = { "DEBUG", "INFO", "WARNING", "ERROR" };
 	va_list va;
@@ -352,11 +456,14 @@ static void cbLog(enum retro_log_level level, const char *fmt, ...) {
 		return;
 
 	std::cerr << "[" << levelName[level] << "] " << buffer << std::flush;
-#endif
+// #endif
 }
 
 bool Emulator::cbEnvironment(unsigned cmd, void* data) {
 	assert(s_loadedEmulator);
+
+	// printf("cbEnvironment: cmd --------->>>>> %d\n", cmd);
+
 	switch (cmd) {
 	case RETRO_ENVIRONMENT_SET_PIXEL_FORMAT:
 		switch (*reinterpret_cast<retro_pixel_format*>(data)) {
@@ -376,10 +483,14 @@ bool Emulator::cbEnvironment(unsigned cmd, void* data) {
 		return true;
 	case RETRO_ENVIRONMENT_GET_VARIABLE: {
 		struct retro_variable* var = reinterpret_cast<struct retro_variable*>(data);
+
 		if (s_envVariables.count(string(var->key))) {
 			var->value = s_envVariables[string(var->key)];
+			// printf("cbEnvironment: GET_VARIABLE: ----->>>> %s, %s\n", var->key, var->value);
 			return true;
 		}
+
+		// printf("cbEnvironment: GET_VARIABLE: ----->>>> %s, NULL <<<<<<<\n", var->key);
 		return false;
 	}
 	case RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY:
@@ -405,6 +516,52 @@ bool Emulator::cbEnvironment(unsigned cmd, void* data) {
 		cb->log = cbLog;
 		return true;
 	}
+
+	// rDreamcast
+	case RETRO_ENVIRONMENT_GET_PREFERRED_HW_RENDER:
+	{
+		unsigned *preferred_hw_render = (unsigned *)data;
+		*preferred_hw_render = RETRO_HW_CONTEXT_OPENGL;
+		return true;
+	}
+
+	case RETRO_ENVIRONMENT_SET_SAVE_STATE_IN_BACKGROUND:
+	{
+		bool *save_state_in_background = (bool *)data;
+		*save_state_in_background = true;
+		return true;
+	}
+
+	case RETRO_ENVIRONMENT_SET_HW_RENDER:
+	case RETRO_ENVIRONMENT_SET_HW_RENDER | RETRO_ENVIRONMENT_EXPERIMENTAL:
+	{
+
+		struct retro_hw_render_callback *cb  =
+			(struct retro_hw_render_callback*)data;
+
+		// printf("Context type required: >>>>> %d\n", cb->context_type);
+		
+		cb->context_type = RETRO_HW_CONTEXT_OPENGL;
+		cb->version_major = 3;
+		cb->version_minor = 3;
+
+		cb->depth = true;
+		cb->stencil = true;
+		cb->bottom_left_origin = true;
+
+		cb->cache_context = false;
+		cb->debug_context = false;
+		cb->context_reset = nullptr;
+		cb->context_destroy = nullptr;
+
+		return true;
+	}
+
+	case RETRO_ENVIRONMENT_SET_HW_RENDER_CONTEXT_NEGOTIATION_INTERFACE: {
+		printf("cbEnvironment: SET_HW_RENDER_CONTEXT_NEGOTIATION_INTERFACE >>>> \n");
+		return true;
+	}
+
 	default:
 		return false;
 	}
@@ -413,6 +570,8 @@ bool Emulator::cbEnvironment(unsigned cmd, void* data) {
 
 void Emulator::cbVideoRefresh(const void* data, unsigned width, unsigned height, size_t pitch) {
 	assert(s_loadedEmulator);
+
+	printf("cbVideoRefresh: width,  height --------->>>>> %d, %d\n", width, height);
 
 	if (data) {
 		s_loadedEmulator->m_imgData = data;

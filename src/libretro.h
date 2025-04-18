@@ -968,6 +968,24 @@ struct retro_hw_render_context_negotiation_interface
    enum retro_hw_render_context_negotiation_interface_type interface_type;
    unsigned interface_version;
 };
+
+#define RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY 55
+
+struct retro_core_option_display
+{
+   /* Variable to configure in RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY */
+   const char *key;
+
+   /* Specifies whether variable should be displayed
+    * when presenting core options to the user */
+   bool visible;
+};
+
+#define RETRO_ENVIRONMENT_RETROARCH_START_BLOCK 0x800000
+#define RETRO_ENVIRONMENT_SET_SAVE_STATE_IN_BACKGROUND (2 | RETRO_ENVIRONMENT_RETROARCH_START_BLOCK)
+
+#define RETRO_ENVIRONMENT_GET_PREFERRED_HW_RENDER 56
+
 #define RETRO_ENVIRONMENT_SET_HW_RENDER_CONTEXT_NEGOTIATION_INTERFACE (43 | RETRO_ENVIRONMENT_EXPERIMENTAL)
                                            /* const struct retro_hw_render_context_negotiation_interface * --
                                             * Sets an interface which lets the libretro core negotiate with frontend how a context is created.
