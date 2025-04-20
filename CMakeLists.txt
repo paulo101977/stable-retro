@@ -244,6 +244,7 @@ add_core(pce mednafen_pce_fast)
 add_core(32x picodrive)
 add_core(saturn mednafen_saturn)
 add_core(ps1 pcsx_rearmed)
+add_core(3ds citra)
 
 set(CLEAN_CORES)
 
@@ -344,6 +345,13 @@ add_library(
 target_link_libraries(retro-base ${ZLIB_LIBRARY} ${LIBZIP_LIBRARIES}
                       ${LUA_LIBRARY} ${LUA_LIBRRAY})
 add_dependencies(retro-base ${CORE_TARGETS})
+
+find_package(SDL2 REQUIRED)
+include_directories(${SDL2_INCLUDE_DIRS})
+target_link_libraries(retro-base ${SDL2_LIBRARIES})
+
+find_package(OpenGL REQUIRED)
+target_link_libraries(retro-base OpenGL::GL)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   target_link_libraries(retro-base dl)

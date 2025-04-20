@@ -13,6 +13,9 @@
 #include "emulator.h"
 #include "libretro.h"
 
+#include <SDL2/SDL.h>
+#include <GL/gl.h>
+
 #ifndef _WIN32
 #define GETSYM dlsym
 #else
@@ -24,11 +27,40 @@ using namespace std;
 namespace Retro {
 
 static Emulator* s_loadedEmulator = nullptr;
+static SDL_Window *window = NULL;
+static SDL_GLContext gl_context = NULL;
+static struct retro_hw_render_callback hw_render;
 
 static map<string, const char*> s_envVariables = {
 	{ "genesis_plus_gx_bram", "per game" },
 	{ "genesis_plus_gx_render", "single field" },
-	{ "genesis_plus_gx_blargg_ntsc_filter", "disabled" }
+	{ "genesis_plus_gx_blargg_ntsc_filter", "disabled" },
+	{"citra_use_cpu_jit", "enabled"},
+	{"citra_cpu_scale", "100%"},
+	{"citra_use_shader_jit", "enabled"},
+	{"citra_use_hw_shaders", "enabled"},
+	{"citra_use_hw_shader_cache", "enabled"},
+	{"citra_use_acc_geo_shaders", "enabled"},
+	{"citra_use_acc_mul", "Eenabled"},
+	{"citra_texture_filter", "Bicubic"},
+	{"citra_texture_sampling", "Linear"},
+	{"citra_custom_textures", "enabled"},
+	{"citra_dump_textures", "enabled"},
+	{"citra_resolution_factor","1x"},
+	{"citra_layout_option", "Default Top-Bottom Screen"},
+	{"citra_swap_screen", "Top"},
+	{"citra_swap_screen_mode", "Toggle"},
+	{"citra_analog_function","C-Stick"},
+	{"citra_deadzone", "15"},
+	{"citra_mouse_touchscreen", "enabled"},
+	{"citra_touch_touchscreen", "enabled"},
+	{"citra_render_touchscreen", "disabled"},
+	{"citra_use_virtual_sd", "enabled"},
+	{"citra_use_libretro_save_path", "LibRetro Default"},
+	{"citra_is_new_3ds", "New 3DS"},
+	{"citra_region_value","Auto"},
+	{"citra_language", "English"},
+	{"citra_use_gdbstub", "disabled"},
 };
 
 static void (*retro_init)(void);
@@ -138,7 +170,26 @@ bool Emulator::loadRom(const string& romPath) {
 void Emulator::run() {
 	assert(s_loadedEmulator == this);
 	m_audioData.clear();
+
+	// SDL_Event e;
+    //     while (SDL_PollEvent(&e)) {
+    //         if (e.type == SDL_QUIT)
+    //             goto exit_loop;
+	// }
+
 	retro_run();
+
+	SDL_Delay(16);
+
+	// exit_loop: {
+	// 	if (hw_render.context_destroy)
+	// 		hw_render.context_destroy();
+	
+	// 	SDL_GL_DeleteContext(gl_context);
+	// 	SDL_DestroyWindow(window);
+	// 	SDL_Quit();
+	// 	return;
+	// }
 }
 
 void Emulator::reset() {
@@ -274,6 +325,17 @@ bool Emulator::loadCore(const string& corePath) {
 	m_imgDepth = 15;
 	s_loadedEmulator = this;
 
+	SDL_Init(SDL_INIT_VIDEO);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+
+    window = SDL_CreateWindow("Libretro Frontend OpenGL",
+        SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 640, 480,
+        SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
+    gl_context = SDL_GL_CreateContext(window);
+    SDL_GL_MakeCurrent(window, gl_context);
+
 	retro_set_environment(cbEnvironment);
 	retro_set_video_refresh(cbVideoRefresh);
 	retro_set_audio_sample(cbAudioSample);
@@ -281,6 +343,9 @@ bool Emulator::loadCore(const string& corePath) {
 	retro_set_input_poll(cbInputPoll);
 	retro_set_input_state(cbInputState);
 	retro_init();
+
+	// if (hw_render.context_reset)
+    //     hw_render.context_reset();
 
 	return true;
 }
@@ -339,7 +404,7 @@ void Emulator::reconfigureAddressSpace() {
 // callback for logging from emulator
 // turned off by default to avoid spamming the log, only used for debugging issues within cores
 static void cbLog(enum retro_log_level level, const char *fmt, ...) {
-#if 0
+// #if 0
 	char buffer[4096] = {0};
 	static const char * levelName[] = { "DEBUG", "INFO", "WARNING", "ERROR" };
 	va_list va;
@@ -352,11 +417,26 @@ static void cbLog(enum retro_log_level level, const char *fmt, ...) {
 		return;
 
 	std::cerr << "[" << levelName[level] << "] " << buffer << std::flush;
-#endif
+// #endif
+}
+
+static void  context_reset(void)
+{
+    // TODO: Create context reset
+	printf("Context RESET called!\n");
+}
+
+static void context_destroy(void)
+{
+    // TODO: Create context destroy
+    printf("Context DESTROY called!\n");
 }
 
 bool Emulator::cbEnvironment(unsigned cmd, void* data) {
 	assert(s_loadedEmulator);
+
+	printf("cbEnvironment: ----->>>>>>>> %d\n", cmd);
+
 	switch (cmd) {
 	case RETRO_ENVIRONMENT_SET_PIXEL_FORMAT:
 		switch (*reinterpret_cast<retro_pixel_format*>(data)) {
@@ -405,6 +485,18 @@ bool Emulator::cbEnvironment(unsigned cmd, void* data) {
 		cb->log = cbLog;
 		return true;
 	}
+
+	// 3DS:
+	case RETRO_ENVIRONMENT_SET_HW_RENDER: {
+		hw_render = *(struct retro_hw_render_callback *)data;
+		hw_render.context_type = RETRO_HW_CONTEXT_OPENGL;
+		hw_render.version_major = 3;
+		hw_render.version_minor = 3;
+		hw_render.context_reset = context_reset;
+		hw_render.context_destroy = context_destroy;
+		return true;
+	}
+
 	default:
 		return false;
 	}
@@ -413,6 +505,8 @@ bool Emulator::cbEnvironment(unsigned cmd, void* data) {
 
 void Emulator::cbVideoRefresh(const void* data, unsigned width, unsigned height, size_t pitch) {
 	assert(s_loadedEmulator);
+
+	printf("cbVideoRefresh: ----->>>>>>>> %d %d %d\n", width, height, pitch);
 
 	if (data) {
 		s_loadedEmulator->m_imgData = data;
@@ -424,6 +518,9 @@ void Emulator::cbVideoRefresh(const void* data, unsigned width, unsigned height,
 
 	s_loadedEmulator -> m_avInfo.geometry.base_width = width;
 	s_loadedEmulator -> m_avInfo.geometry.base_height = height;
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    SDL_GL_SwapWindow(window);
 }
 
 void Emulator::cbAudioSample(int16_t left, int16_t right) {
@@ -464,4 +561,5 @@ vector<string> Emulator::buttons() const {
 vector<string> Emulator::keybinds() const {
 	return Retro::keybinds(m_core);
 }
+
 }
