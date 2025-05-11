@@ -1,0 +1,63 @@
+if(UNIX)
+set(wxUnixSources
+   src/unix/appunix.cpp
+   src/unix/dir.cpp
+   src/unix/evtloopunix.cpp
+   src/unix/epolldispatcher.cpp
+   src/unix/threadpsx.cpp
+   src/unix/utilsunx.cpp
+   src/unix/wakeuppipe.cpp
+   src/common/selectdispatcher.cpp
+   src/common/fdiodispatcher.cpp
+   )
+endif()
+if(WIN32)
+set(wxWindowsSources
+   src/msw/dir.cpp
+   src/msw/evtloopconsole.cpp
+   src/msw/main.cpp
+   src/msw/thread.cpp
+   src/msw/utils.cpp
+   )
+endif()
+add_library(wxwidgets
+   src/common/appbase.cpp
+   src/common/arrstr.cpp
+   src/common/config.cpp
+   src/common/convauto.cpp
+   src/common/datetime.cpp
+   src/common/datetimefmt.cpp
+   src/common/dircmn.cpp
+   src/common/dynarray.cpp
+   src/common/event.cpp
+   src/common/evtloopcmn.cpp
+   src/common/ffile.cpp
+   src/common/file.cpp
+   src/common/filefn.cpp
+   src/common/filename.cpp
+   src/common/hashmap.cpp
+   src/common/init.cpp
+   src/common/list.cpp
+   src/common/longlong.cpp
+   src/common/module.cpp
+   src/common/mstream.cpp
+   src/common/object.cpp
+   src/common/strconv.cpp
+   src/common/stream.cpp
+   src/common/string.cpp
+   src/common/stringimpl.cpp
+   src/common/strvararg.cpp
+   src/common/textbuf.cpp
+   src/common/textfile.cpp
+   src/common/threadinfo.cpp
+   src/common/time.cpp
+   src/common/tokenzr.cpp
+   src/common/txtstrm.cpp
+   src/common/unichar.cpp
+   src/common/utilscmn.cpp
+   src/common/wfstream.cpp
+   src/common/wxcrt.cpp
+   src/common/hash.cpp
+   ${wxUnixSources}
+   ${wxWindowsSources}
+)
